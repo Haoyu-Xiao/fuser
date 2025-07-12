@@ -932,7 +932,7 @@ pub struct cuse_init_in {
 
 #[cfg(feature = "abi-7-12")]
 #[repr(C)]
-#[derive(Debug, KnownLayout, Immutable)]
+#[derive(Debug, IntoBytes, KnownLayout, Immutable)]
 pub struct cuse_init_out {
     pub major: u32,
     pub minor: u32,

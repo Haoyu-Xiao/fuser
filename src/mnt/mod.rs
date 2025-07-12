@@ -13,6 +13,11 @@ mod fuse3_sys;
 
 #[cfg(fuser_mount_impl = "pure-rust")]
 mod fuse_pure;
+
+#[cfg(feature = "abi-7-12")]
+#[cfg(fuser_mount_impl = "libfuse3")]
+mod cuse;
+
 pub mod mount_options;
 
 #[cfg(any(test, feature = "libfuse"))]
@@ -53,6 +58,9 @@ pub use fuse2::Mount;
 pub use fuse3::Mount;
 #[cfg(fuser_mount_impl = "pure-rust")]
 pub use fuse_pure::Mount;
+#[cfg(feature = "abi-7-12")]
+#[cfg(fuser_mount_impl = "libfuse3")]
+pub use cuse::Cuse;
 #[cfg(not(fuser_mount_impl = "libfuse3"))]
 use std::ffi::CStr;
 

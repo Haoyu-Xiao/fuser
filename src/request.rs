@@ -173,6 +173,13 @@ impl<'a> Request<'a> {
                 se.initialized = true;
                 return Ok(Some(x.reply(&config)));
             }
+            #[cfg(feature = "abi-7-12")]
+            ll::Operation::CuseInit(_) => {
+                se.filesystem
+                    .cuse_init(self, self.reply())
+                    .map_err(Errno::from_i32)?;
+                se.initialized = true;
+            }
             // Any operation is invalid before initialization
             _ if !se.initialized => {
                 warn!("Ignoring FUSE operation before init: {}", self.request);
@@ -630,12 +637,6 @@ impl<'a> Request<'a> {
                     x.options(),
                     self.reply(),
                 );
-            }
-
-            #[cfg(feature = "abi-7-12")]
-            ll::Operation::CuseInit(_) => {
-                // TODO: handle CUSE_INIT
-                return Err(Errno::ENOSYS);
             }
         }
         Ok(None)

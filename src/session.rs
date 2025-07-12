@@ -16,6 +16,9 @@ use std::thread::{self, JoinHandle};
 use std::{io, ops::DerefMut};
 
 use crate::ll::fuse_abi as abi;
+#[cfg(feature = "abi-7-12")]
+#[cfg(fuser_mount_impl = "libfuse3")]
+use crate::mnt::Cuse;
 use crate::request::Request;
 use crate::Filesystem;
 use crate::MountOption;
@@ -120,6 +123,29 @@ impl<FS: Filesystem> Session<FS> {
         })
     }
 
+    /// Create a new session for CUSE device.
+    #[cfg(feature = "abi-7-12")]
+    #[cfg(fuser_mount_impl = "libfuse3")]
+    pub fn new_cuse(filesystem: FS) -> io::Result<Session<FS>> {
+        let cuse = Cuse::new()?;
+
+        let ch = Channel::new(cuse.file());
+
+        let mount = Mount::new_cuse()?;
+
+        Ok(Session {
+            filesystem,
+            ch,
+            mount: Arc::new(Mutex::new(Some((PathBuf::new(), mount)))),
+            allowed: SessionACL::All,
+            session_owner: geteuid().as_raw(),
+            proto_major: 0,
+            proto_minor: 0,
+            initialized: false,
+            destroyed: false,
+        })
+    }
+
     /// Wrap an existing /dev/fuse file descriptor. This doesn't mount the
     /// filesystem anywhere; that must be done separately.
     pub fn from_fd(filesystem: FS, fd: OwnedFd, acl: SessionACL) -> Self {
@@ -157,7 +183,10 @@ impl<FS: Filesystem> Session<FS> {
                     // Dispatch request
                     Some(req) => req.dispatch(self),
                     // Quit loop on illegal request
-                    None => break,
+                    None => {
+                        warn!("Received illegal request, quitting session loop");
+                        break;
+                    }
                 },
                 Err(err) => match err.raw_os_error() {
                     // Operation interrupted. Accordingly to FUSE, this is safe to retry

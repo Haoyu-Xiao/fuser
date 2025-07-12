@@ -15,6 +15,8 @@ use crate::ll::{
     reply::{DirEntList, DirEntOffset, DirEntry},
     INodeNo,
 };
+#[cfg(feature = "abi-7-12")]
+use crate::CuseConfig;
 #[cfg(feature = "abi-7-40")]
 use crate::{consts::FOPEN_PASSTHROUGH, passthrough::BackingId};
 use libc::c_int;
@@ -161,6 +163,32 @@ impl ReplyData {
     /// Reply to a request with the given error code
     pub fn error(self, err: c_int) {
         self.reply.error(err);
+    }
+}
+
+///
+/// Cuse init reply
+///
+#[cfg(feature = "abi-7-12")]
+#[derive(Debug)]
+pub struct ReplyCuseInit {
+    reply: ReplyRaw,
+}
+
+#[cfg(feature = "abi-7-12")]
+impl Reply for ReplyCuseInit {
+    fn new<S: ReplySender>(unique: u64, sender: S) -> ReplyCuseInit {
+        ReplyCuseInit {
+            reply: Reply::new(unique, sender),
+        }
+    }
+}
+
+#[cfg(feature = "abi-7-12")]
+impl ReplyCuseInit {
+    /// Reply to a request with the given entry
+    pub fn reply<'a>(self, config: CuseConfig<'a>) {
+        self.reply.send_ll(&ll::Response::new_cuse_init(config));
     }
 }
 

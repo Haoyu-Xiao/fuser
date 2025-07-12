@@ -88,3 +88,7 @@ required-features = ["abi-7-11"]
 [[example]]
 name = "passthrough"
 required-features = ["abi-7-40"]
+
+[[example]]
+name = "cuse"
+required-features = ["abi-7-12", "libfuse"]

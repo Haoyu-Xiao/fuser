@@ -22,6 +22,8 @@ pub enum Response<'a> {
     Error(i32),
     Data(ResponseBuf),
     Slice(&'a [u8]),
+    #[cfg(feature = "abi-7-12")]
+    DoubleData(ResponseBuf, ResponseBuf), // Cuse init user more iovec buffers
 }
 
 impl<'a> Response<'a> {
@@ -34,6 +36,8 @@ impl<'a> Response<'a> {
             Response::Error(_) => 0,
             Response::Data(v) => v.len(),
             Response::Slice(d) => d.len(),
+            #[cfg(feature = "abi-7-12")]
+            Response::DoubleData(d1, d2) => d1.len() + d2.len(),
         };
         let header = abi::fuse_out_header {
             unique: unique.0,
@@ -51,6 +55,11 @@ impl<'a> Response<'a> {
             Response::Error(_) => {}
             Response::Data(d) => v.push(IoSlice::new(d)),
             Response::Slice(d) => v.push(IoSlice::new(d)),
+            #[cfg(feature = "abi-7-12")]
+            Response::DoubleData(d1, d2) => {
+                v.push(IoSlice::new(d1));
+                v.push(IoSlice::new(d2));
+            }
         }
         f(&v)
     }
@@ -74,6 +83,20 @@ impl<'a> Response<'a> {
 
     pub(crate) fn new_slice(data: &'a [u8]) -> Self {
         Self::Slice(data)
+    }
+
+    #[cfg(feature = "abi-7-12")]
+    pub(crate) fn new_double_data<
+        T: AsRef<[u8]> + Into<Vec<u8>>,
+        U: AsRef<[u8]> + Into<Vec<u8>>,
+    >(
+        data1: T,
+        data2: U,
+    ) -> Self {
+        Self::DoubleData(
+            ResponseBuf::from_slice(data1.into().as_ref()),
+            ResponseBuf::from_slice(data2.into().as_ref()),
+        )
     }
 
     pub(crate) fn new_entry(
@@ -260,6 +283,24 @@ impl<'a> Response<'a> {
     pub(crate) fn new_lseek(offset: i64) -> Self {
         let r = abi::fuse_lseek_out { offset };
         Self::from_struct(&r)
+    }
+
+    #[cfg(feature = "abi-7-12")]
+    pub(crate) fn new_cuse_init(config: crate::CuseConfig<'_>) -> Self {
+        let outarg = abi::cuse_init_out {
+            major: abi::FUSE_KERNEL_VERSION,
+            minor: abi::FUSE_KERNEL_MINOR_VERSION,
+            unused: 0,
+            flags: config.flags,
+            max_read: config.max_read,
+            max_write: config.max_write,
+            dev_major: config.dev_major, // chardev major
+            dev_minor: config.dev_minor, // chardev minor
+            spare: [0; 10],
+        };
+
+        let dev_info = format!("DEVNAME={}\x00", config.dev_name);
+        Self::new_double_data(outarg.as_bytes(), dev_info.as_bytes())
     }
 
     fn from_struct<T: IntoBytes + Immutable + ?Sized>(data: &T) -> Self {

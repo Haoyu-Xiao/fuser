@@ -41,6 +41,8 @@ pub use reply::{
     ReplyBmap, ReplyCreate, ReplyDirectory, ReplyDirectoryPlus, ReplyIoctl, ReplyLock, ReplyLseek,
     ReplyStatfs, ReplyWrite,
 };
+#[cfg(feature = "abi-7-12")]
+pub use reply::{ReplyCuseInit};
 pub use request::Request;
 pub use session::{BackgroundSession, Session, SessionACL, SessionUnmounter};
 #[cfg(feature = "abi-7-28")]
@@ -86,6 +88,11 @@ const fn default_init_flags(#[allow(unused_variables)] capabilities: u64) -> u64
         }
         flags
     }
+}
+
+#[cfg(feature = "abi-7-12")]
+const fn default_fuse_init_flags() -> u32 {
+    CUSE_UNRESTRICTED_IOCTL
 }
 
 /// File types
@@ -318,6 +325,41 @@ impl KernelConfig {
     }
 }
 
+/// Configuration for the CUSE character device
+#[cfg(feature = "abi-7-12")]
+#[derive(Debug, Clone)]
+pub struct CuseConfig<'a> {
+    /// Device name
+    pub dev_name: &'a str,
+    /// Major version of the device
+    pub dev_major: u32,
+    /// Minor version of the device
+    pub dev_minor: u32,
+
+    /// Flags for the CUSE character device
+    pub flags: u32,
+    /// Maximum read size
+    pub max_read: u32,
+    /// Maximum write size
+    pub max_write: u32,
+}
+
+#[cfg(feature = "abi-7-12")]
+impl<'a> CuseConfig<'a> {
+    /// Create a new CharDeviceConfig
+    pub fn new(dev_name: &'a str, dev_major: u32, dev_minor: u32) -> Self {
+        Self {
+            dev_name,
+            dev_major,
+            dev_minor,
+
+            flags: default_fuse_init_flags(),
+            max_read: 0x00020000,
+            max_write: 0x00100000,
+        }
+    }
+}
+
 /// Filesystem trait.
 ///
 /// This trait must be implemented to provide a userspace filesystem via FUSE.
@@ -326,9 +368,14 @@ impl KernelConfig {
 /// nothing.
 #[allow(clippy::too_many_arguments)]
 pub trait Filesystem {
-    /// Initialize filesystem.
-    /// Called before any other filesystem method.
-    /// The kernel module connection can be configured using the KernelConfig object
+    /// Initialize Cuse character device.
+    /// The kernel module connection can be configured using the CuseKernelConfig object
+    #[cfg(feature = "abi-7-12")]
+    fn cuse_init(&mut self, _req: &Request<'_>, _reply: ReplyCuseInit) -> Result<(), c_int> {
+        Ok(())
+    }
+
+    /// Initialization
     fn init(&mut self, _req: &Request<'_>, _config: &mut KernelConfig) -> Result<(), c_int> {
         Ok(())
     }
@@ -1086,4 +1133,20 @@ pub fn spawn_mount2<'a, FS: Filesystem + Send + 'static + 'a, P: AsRef<Path>>(
 ) -> io::Result<BackgroundSession> {
     check_option_conflicts(options)?;
     Session::new(filesystem, mountpoint.as_ref(), options).and_then(|se| se.spawn())
+}
+
+/// Similar to mount(), but register a character device instead of a filesystem.
+#[cfg(feature = "abi-7-12")]
+#[cfg(fuser_mount_impl = "libfuse3")]
+pub fn cuse<'a, CD: Filesystem + Send + 'static + 'a>(char_device: CD) -> io::Result<()> {
+    Session::new_cuse(char_device).and_then(|mut se| se.run())
+}
+
+/// Similar to spawn_mount(), but register a character device instead of a filesystem.
+#[cfg(feature = "abi-7-12")]
+#[cfg(fuser_mount_impl = "libfuse3")]
+pub fn spawn_cuse<'a, CD: Filesystem + Send + 'static + 'a>(
+    char_device: CD,
+) -> io::Result<BackgroundSession> {
+    Session::new_cuse(char_device).and_then(|se| se.spawn())
 }

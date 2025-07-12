@@ -50,6 +50,20 @@ impl Mount {
             Ok((Arc::new(file), mount))
         })
     }
+
+    /// Create a mount session for cuse
+    #[cfg(feature = "abi-7-12")]
+    pub fn new_cuse() -> io::Result<Mount> {
+        with_fuse_args(&[], |args| {
+            let fuse_session = unsafe { fuse_session_new(args, ptr::null(), 0, ptr::null_mut()) };
+            if fuse_session.is_null() {
+                log::error!("Failed to create fuse session for cuse");
+                return Err(io::Error::last_os_error());
+            }
+            let mount = Mount { fuse_session };
+            Ok(mount)
+        })
+    }
 }
 impl Drop for Mount {
     fn drop(&mut self) {
