@@ -31,6 +31,8 @@ pub use mnt::mount_options::MountOption;
 pub use notify::{Notifier, PollHandle};
 #[cfg(feature = "abi-7-40")]
 pub use passthrough::BackingId;
+#[cfg(feature = "abi-7-12")]
+pub use reply::ReplyCuseInit;
 #[cfg(feature = "abi-7-11")]
 pub use reply::ReplyPoll;
 #[cfg(target_os = "macos")]
@@ -41,8 +43,6 @@ pub use reply::{
     ReplyBmap, ReplyCreate, ReplyDirectory, ReplyDirectoryPlus, ReplyIoctl, ReplyLock, ReplyLseek,
     ReplyStatfs, ReplyWrite,
 };
-#[cfg(feature = "abi-7-12")]
-pub use reply::{ReplyCuseInit};
 pub use request::Request;
 pub use session::{BackgroundSession, Session, SessionACL, SessionUnmounter};
 #[cfg(feature = "abi-7-28")]

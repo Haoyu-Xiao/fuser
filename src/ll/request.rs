@@ -1334,6 +1334,7 @@ mod op {
         pub fn in_data(&self) -> &[u8] {
             &self.data[..self.arg.in_size as usize]
         }
+        #[allow(dead_code)]
         pub fn unrestricted(&self) -> bool {
             self.arg.flags & consts::FUSE_IOCTL_UNRESTRICTED != 0
         }

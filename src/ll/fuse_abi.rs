@@ -76,8 +76,10 @@ pub const FUSE_KERNEL_MINOR_VERSION: u32 = 29;
 pub const FUSE_KERNEL_MINOR_VERSION: u32 = 30;
 #[cfg(all(feature = "abi-7-31", not(feature = "abi-7-36")))]
 pub const FUSE_KERNEL_MINOR_VERSION: u32 = 31;
-#[cfg(all(feature = "abi-7-36", not(feature = "abi-7-40")))]
+#[cfg(all(feature = "abi-7-36", not(feature = "abi-7-39")))]
 pub const FUSE_KERNEL_MINOR_VERSION: u32 = 36;
+#[cfg(all(feature = "abi-7-39", not(feature = "abi-7-40")))]
+pub const FUSE_KERNEL_MINOR_VERSION: u32 = 39;
 #[cfg(feature = "abi-7-40")]
 pub const FUSE_KERNEL_MINOR_VERSION: u32 = 40;
 
@@ -243,6 +245,8 @@ pub mod consts {
     pub const FUSE_INIT_EXT: u64 = 1 << 30; // extended fuse_init_in request
     #[cfg(feature = "abi-7-36")]
     pub const FUSE_INIT_RESERVED: u64 = 1 << 31; // reserved, do not use
+    #[cfg(feature = "abi-7-39")]
+    pub const FUSE_DIRECT_IO_ALLOW_MMAP: u64 = 1 << 36; // allow mmap on direct I/O files
     #[cfg(feature = "abi-7-40")]
     pub const FUSE_PASSTHROUGH: u64 = 1 << 37; // filesystem wants to use passthrough files
 

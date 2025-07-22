@@ -514,9 +514,9 @@ impl<'a> Request<'a> {
 
             #[cfg(feature = "abi-7-11")]
             ll::Operation::IoCtl(x) => {
-                if x.unrestricted() {
-                    return Err(Errno::ENOSYS);
-                } else {
+                // if x.unrestricted() {
+                //     return Err(Errno::ENOSYS);
+                // } else {
                     se.filesystem.ioctl(
                         self,
                         self.request.nodeid().into(),
@@ -527,7 +527,7 @@ impl<'a> Request<'a> {
                         x.out_size(),
                         self.reply(),
                     );
-                }
+                // }
             }
             #[cfg(feature = "abi-7-11")]
             ll::Operation::Poll(x) => {
